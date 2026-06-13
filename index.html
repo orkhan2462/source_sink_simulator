@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Source Sink Streamlines</title>
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=zodiak@400,700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.25rem;
+      --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+      --color-bg: #f7f6f2; --color-surface: #fbfbf9; --color-surface-2: #f1efea; --color-border: #d8d4cd;
+      --color-text: #24211b; --color-text-muted: #6f6a62; --color-primary: #01696f; --color-primary-hover: #0c4e54;
+      --color-danger: #a13544; --color-danger-hover: #782b33; --color-accent: #c97d10; --shadow: 0 14px 38px rgba(40,37,29,.08);
+      --radius-md: 0.8rem; --radius-lg: 1.1rem; --font-body: 'Satoshi', Arial, sans-serif; --font-display: 'Zodiak', Georgia, serif;
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614; --color-surface: #1d1c1a; --color-surface-2: #262421; --color-border: #393732;
+      --color-text: #e7e3dd; --color-text-muted: #aaa39a; --color-primary: #56a1aa; --color-primary-hover: #6bb2bb;
+      --color-danger: #e07a86; --color-danger-hover: #ee939d; --color-accent: #efb35d; --shadow: 0 16px 40px rgba(0,0,0,.35);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; min-height: 100vh; font-family: var(--font-body); font-size: var(--text-base);
+      color: var(--color-text); background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 32%),
+        radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 28%),
+        var(--color-bg);
+    }
+    button, input, select { font: inherit; }
+    .app {
+      width: min(1280px, calc(100% - 2rem)); margin: 0 auto; padding: var(--space-6) 0 var(--space-8);
+      display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: var(--space-6);
+    }
+    .panel, .canvas-shell {
+      background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+      border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .panel { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-5); }
+    .brand { display: flex; justify-content: space-between; gap: var(--space-4); align-items: start; }
+    .logo { display: inline-flex; align-items: center; gap: .8rem; text-decoration: none; color: inherit; }
+    .logo-mark {
+      width: 2.6rem; height: 2.6rem; border-radius: 999px; display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-accent) 50%, var(--color-primary)));
+      color: white;
+    }
+    .logo-mark svg { width: 1.4rem; height: 1.4rem; }
+    .brand h1 { margin: 0; font-family: var(--font-display); font-size: var(--text-xl); line-height: 1.05; }
+    .brand p { margin: .35rem 0 0; color: var(--color-text-muted); font-size: var(--text-sm); max-width: 28ch; }
+    .theme-toggle {
+      width: 44px; height: 44px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+      background: var(--color-surface-2); color: var(--color-text); display: grid; place-items: center; cursor: pointer;
+    }
+    .toolbar { display: grid; gap: var(--space-3); }
+    .button-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+    .btn {
+      min-height: 44px; padding: .85rem 1rem; border-radius: var(--radius-md); border: 1px solid transparent; cursor: pointer;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--color-primary); color: white; }
+    .btn-primary:hover { background: var(--color-primary-hover); }
+    .btn-danger { background: var(--color-danger); color: white; }
+    .btn-danger:hover { background: var(--color-danger-hover); }
+    .btn-soft { background: var(--color-surface-2); color: var(--color-text); border-color: color-mix(in srgb, var(--color-text) 10%, transparent); }
+    .group { display: grid; gap: var(--space-3); }
+    .group h2 { margin: 0; font-size: var(--text-lg); }
+    .card { padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-surface-2); border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent); }
+    label { display: grid; gap: .45rem; font-size: var(--text-sm); color: var(--color-text-muted); }
+    input[type="range"], select { width: 100%; }
+    select, .pill {
+      min-height: 44px; border-radius: .8rem; border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+      background: var(--color-surface); color: var(--color-text); padding: .7rem .85rem;
+    }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+    .stat-value { font-size: var(--text-lg); font-weight: 700; }
+    .stat-label { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); }
+    .canvas-shell { padding: var(--space-4); display: grid; gap: var(--space-3); }
+    .canvas-head { display: flex; justify-content: space-between; gap: var(--space-4); align-items: center; }
+    .canvas-head p { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+    canvas {
+      width: 100%; aspect-ratio: 1.35 / 1; border-radius: var(--radius-md); background: #fcfcfa;
+      border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); touch-action: none;
+    }
+    [data-theme="dark"] canvas { background: #11100f; }
+    .legend { display: flex; flex-wrap: wrap; gap: .7rem 1rem; font-size: var(--text-sm); color: var(--color-text-muted); }
+    .legend span { display: inline-flex; align-items: center; gap: .45rem; }
+    .swatch { width: 12px; height: 12px; border-radius: 999px; }
+    .help { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.5; }
+    .list { margin: 0; padding-left: 1rem; color: var(--color-text-muted); font-size: var(--text-sm); }
+    .list li + li { margin-top: .35rem; }
+    @media (max-width: 980px) { .app { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel" aria-label="Controls">
+      <div class="brand">
+        <a class="logo" href="#" aria-label="Source sink streamlines home">
+          <span class="logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="8"></circle>
+              <path d="M12 4v8"></path>
+              <path d="M8 12h8"></path>
+              <path d="M12 12l4 4"></path>
+            </svg>
+          </span>
+          <span>
+            <h1>Source & Sink Flow</h1>
+            <p>Interactive streamline builder for 2D potential flow. Add singularities, drag them, and watch the field update live.</p>
+          </span>
+        </a>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color mode">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+
+      <div class="toolbar">
+        <div class="button-row">
+          <button id="addSource" class="btn btn-primary" type="button">Add source</button>
+          <button id="addSink" class="btn btn-danger" type="button">Add sink</button>
+          <button id="clearAll" class="btn btn-soft" type="button">Clear</button>
+        </div>
+      </div>
+
+      <div class="group card">
+        <h2>Selected point</h2>
+        <label>
+          Type
+          <select id="selectedType">
+            <option value="source">Source</option>
+            <option value="sink">Sink</option>
+          </select>
+        </label>
+        <label>
+          Strength
+          <input id="selectedStrength" type="range" min="20" max="260" value="120" step="5" />
+        </label>
+        <div class="pill" id="selectedReadout">No point selected</div>
+        <button id="deleteSelected" class="btn btn-soft" type="button">Delete selected</button>
+      </div>
+
+      <div class="group card">
+        <h2>Field settings</h2>
+        <label>
+          Seed density
+          <input id="density" type="range" min="8" max="26" value="16" step="1" />
+        </label>
+        <label>
+          Integration steps
+          <input id="steps" type="range" min="80" max="420" value="210" step="10" />
+        </label>
+        <label>
+          Step size
+          <input id="stepSize" type="range" min="2" max="12" value="5" step="1" />
+        </label>
+        <label>
+          Show vectors
+          <select id="showVectors">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="stats">
+        <div class="card">
+          <div class="stat-value" id="countReadout">0</div>
+          <div class="stat-label">Points</div>
+        </div>
+        <div class="card">
+          <div class="stat-value" id="modeReadout">Drag</div>
+          <div class="stat-label">Interaction</div>
+        </div>
+      </div>
+
+      <div class="card help">
+        Click <strong>Add source</strong> or <strong>Add sink</strong>, then drag any point to a new location. Streamlines are drawn tangent to the velocity field, just like field lines are tangent to an electric field, but here the vectors represent ideal fluid flow from sources and into sinks.
+      </div>
+
+      <ol class="list">
+        <li>Sources push streamlines outward.</li>
+        <li>Sinks pull streamlines inward.</li>
+        <li>A source-sink pair forms a dipole-like flow pattern.</li>
+      </ol>
+    </section>
+
+    <section class="canvas-shell" aria-label="Simulation canvas">
+      <div class="canvas-head">
+        <div>
+          <h2 style="margin:0;font-size:var(--text-lg);">Interactive flow map</h2>
+          <p>Drag a marker. Double-click empty space to add the currently selected type at that location.</p>
+        </div>
+        <div class="pill">GitHub Pages ready</div>
+      </div>
+      <canvas id="flowCanvas" width="980" height="720"></canvas>
+      <div class="legend">
+        <span><i class="swatch" style="background:#0f7c82"></i>Source</span>
+        <span><i class="swatch" style="background:#c54658"></i>Sink</span>
+        <span><i class="swatch" style="background:#d9951f"></i>Streamline</span>
+        <span><i class="swatch" style="background:#4a67cc"></i>Velocity vector</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('flowCanvas');
+    const ctx = canvas.getContext('2d');
+    const addSourceBtn = document.getElementById('addSource');
+    const addSinkBtn = document.getElementById('addSink');
+    const clearAllBtn = document.getElementById('clearAll');
+    const selectedType = document.getElementById('selectedType');
+    const selectedStrength = document.getElementById('selectedStrength');
+    const selectedReadout = document.getElementById('selectedReadout');
+    const deleteSelectedBtn = document.getElementById('deleteSelected');
+    const densityInput = document.getElementById('density');
+    const stepsInput = document.getElementById('steps');
+    const stepSizeInput = document.getElementById('stepSize');
+    const showVectorsSelect = document.getElementById('showVectors');
+    const countReadout = document.getElementById('countReadout');
+    const modeReadout = document.getElementById('modeReadout');
+    const themeToggle = document.querySelector('[data-theme-toggle]');
+
+    const state = {
+      points: [
+        { x: 330, y: 360, strength: 120, type: 'source' },
+        { x: 650, y: 360, strength: 120, type: 'sink' }
+      ],
+      selected: 0,
+      dragId: null,
+      currentAddType: 'source'
+    };
+
+    const DPR = Math.max(1, window.devicePixelRatio || 1);
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.round(rect.width * DPR);
+      canvas.height = Math.round((rect.width / 1.35) * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      draw();
+    }
+
+    function syncSelectedUI() {
+      const p = state.points[state.selected];
+      countReadout.textContent = state.points.length;
+      if (!p) {
+        selectedReadout.textContent = 'No point selected';
+        return;
+      }
+      selectedType.value = p.type;
+      selectedStrength.value = p.strength;
+      selectedReadout.textContent = `${p.type} • strength ${p.strength} • (${Math.round(p.x)}, ${Math.round(p.y)})`;
+    }
+
+    function getCanvasMetrics() {
+      const rect = canvas.getBoundingClientRect();
+      return { width: rect.width, height: rect.height, rect };
+    }
+
+    function pointerPos(evt) {
+      const { rect } = getCanvasMetrics();
+      return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+    }
+
+    function velocityAt(x, y) {
+      let vx = 0, vy = 0;
+      for (const p of state.points) {
+        const dx = x - p.x;
+        const dy = y - p.y;
+        const r2 = dx * dx + dy * dy + 60;
+        const factor = (p.type === 'source' ? 1 : -1) * p.strength / (2 * Math.PI * r2);
+        vx += factor * dx;
+        vy += factor * dy;
+      }
+      return { vx, vy };
+    }
+
+    function normalize(vx, vy) {
+      const mag = Math.hypot(vx, vy) || 1;
+      return { x: vx / mag, y: vy / mag, mag };
+    }
+
+    function traceSeed(seedX, seedY, direction) {
+      const pts = [];
+      let x = seedX, y = seedY;
+      const { width, height } = getCanvasMetrics();
+      const maxSteps = Number(stepsInput.value);
+      const step = Number(stepSizeInput.value);
+      for (let i = 0; i < maxSteps; i++) {
+        const { vx, vy } = velocityAt(x, y);
+        const n = normalize(vx, vy);
+        if (n.mag < 0.002) break;
+        x += n.x * step * direction;
+        y += n.y * step * direction;
+        if (x < 0 || x > width || y < 0 || y > height) break;
+        for (const p of state.points) {
+          if (Math.hypot(x - p.x, y - p.y) < 12) return pts;
+        }
+        pts.push({ x, y });
+      }
+      return pts;
+    }
+
+    function drawArrow(x, y, vx, vy, scale = 20) {
+      const n = normalize(vx, vy);
+      const ex = x + n.x * scale;
+      const ey = y + n.y * scale;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      const angle = Math.atan2(n.y, n.x);
+      const size = 5;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - size * Math.cos(angle - Math.PI / 6), ey - size * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(ex - size * Math.cos(angle + Math.PI / 6), ey - size * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawGrid(width, height) {
+      ctx.save();
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-border').trim();
+      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = 1;
+      const gap = 40;
+      for (let x = gap; x < width; x += gap) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+      }
+      for (let y = gap; y < height; y += gap) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function draw() {
+      const { width, height } = getCanvasMetrics();
+      ctx.clearRect(0, 0, width, height);
+      drawGrid(width, height);
+
+      const streamlineColor = '#d9951f';
+      const vectorColor = '#4a67cc';
+      const density = Number(densityInput.value);
+      const pad = 30;
+
+      ctx.save();
+      ctx.strokeStyle = streamlineColor;
+      ctx.lineWidth = 1.5;
+      for (let gy = pad; gy <= height - pad; gy += Math.max(20, Math.floor(height / density))) {
+        for (let gx = pad; gx <= width - pad; gx += Math.max(20, Math.floor(width / density))) {
+          const { vx, vy } = velocityAt(gx, gy);
+          if (Math.hypot(vx, vy) < 0.008) continue;
+          let tooClose = false;
+          for (const p of state.points) {
+            if (Math.hypot(gx - p.x, gy - p.y) < 24) tooClose = true;
+          }
+          if (tooClose) continue;
+          const backward = traceSeed(gx, gy, -1);
+          const forward = traceSeed(gx, gy, 1);
+          if (!backward.length && !forward.length) continue;
+          ctx.beginPath();
+          for (let i = backward.length - 1; i >= 0; i--) {
+            const pt = backward[i];
+            if (i === backward.length - 1) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.lineTo(gx, gy);
+          for (const pt of forward) ctx.lineTo(pt.x, pt.y);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      if (showVectorsSelect.value === 'yes') {
+        ctx.save();
+        ctx.strokeStyle = vectorColor;
+        ctx.fillStyle = vectorColor;
+        ctx.lineWidth = 1.1;
+        for (let y = 50; y < height; y += 90) {
+          for (let x = 50; x < width; x += 90) {
+            const { vx, vy } = velocityAt(x, y);
+            if (Math.hypot(vx, vy) < 0.01) continue;
+            drawArrow(x, y, vx, vy, 18);
+          }
+        }
+        ctx.restore();
+      }
+
+      state.points.forEach((p, i) => {
+        const isSelected = i === state.selected;
+        ctx.save();
+        ctx.fillStyle = p.type === 'source' ? '#0f7c82' : '#c54658';
+        ctx.strokeStyle = isSelected ? '#111' : 'rgba(255,255,255,.9)';
+        ctx.lineWidth = isSelected ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(p.x - 5, p.y); ctx.lineTo(p.x + 5, p.y);
+        if (p.type === 'source') { ctx.moveTo(p.x, p.y - 5); ctx.lineTo(p.x, p.y + 5); }
+        ctx.stroke();
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-text').trim();
+        ctx.font = '12px Satoshi, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${p.type[0].toUpperCase()}${i + 1}`, p.x, p.y - 18);
+        ctx.restore();
+      });
+      syncSelectedUI();
+    }
+
+    function hitTest(pos) {
+      for (let i = state.points.length - 1; i >= 0; i--) {
+        const p = state.points[i];
+        if (Math.hypot(pos.x - p.x, pos.y - p.y) <= 16) return i;
+      }
+      return -1;
+    }
+
+    function addPoint(type, x, y, strength = 120) {
+      state.points.push({ type, x, y, strength });
+      state.selected = state.points.length - 1;
+      draw();
+    }
+
+    addSourceBtn.addEventListener('click', () => {
+      state.currentAddType = 'source';
+      modeReadout.textContent = 'Add source';
+      const { width, height } = getCanvasMetrics();
+      addPoint('source', width * 0.3, height * (0.25 + Math.random() * 0.5));
+    });
+
+    addSinkBtn.addEventListener('click', () => {
+      state.currentAddType = 'sink';
+      modeReadout.textContent = 'Add sink';
+      const { width, height } = getCanvasMetrics();
+      addPoint('sink', width * 0.7, height * (0.25 + Math.random() * 0.5));
+    });
+
+    clearAllBtn.addEventListener('click', () => {
+      state.points = [];
+      state.selected = -1;
+      draw();
+    });
+
+    selectedType.addEventListener('change', () => {
+      const p = state.points[state.selected];
+      if (!p) return;
+      p.type = selectedType.value;
+      state.currentAddType = selectedType.value;
+      draw();
+    });
+
+    selectedStrength.addEventListener('input', () => {
+      const p = state.points[state.selected];
+      if (!p) return;
+      p.strength = Number(selectedStrength.value);
+      draw();
+    });
+
+    deleteSelectedBtn.addEventListener('click', () => {
+      if (state.selected < 0) return;
+      state.points.splice(state.selected, 1);
+      state.selected = Math.min(state.selected, state.points.length - 1);
+      draw();
+    });
+
+    [densityInput, stepsInput, stepSizeInput, showVectorsSelect].forEach(el => el.addEventListener('input', draw));
+    showVectorsSelect.addEventListener('change', draw);
+
+    canvas.addEventListener('pointerdown', (evt) => {
+      const pos = pointerPos(evt);
+      const hit = hitTest(pos);
+      if (hit >= 0) {
+        state.selected = hit;
+        state.dragId = hit;
+        modeReadout.textContent = 'Dragging';
+        canvas.setPointerCapture(evt.pointerId);
+        draw();
+      }
+    });
+
+    canvas.addEventListener('pointermove', (evt) => {
+      if (state.dragId === null) return;
+      const pos = pointerPos(evt);
+      const { width, height } = getCanvasMetrics();
+      const p = state.points[state.dragId];
+      p.x = Math.max(16, Math.min(width - 16, pos.x));
+      p.y = Math.max(16, Math.min(height - 16, pos.y));
+      draw();
+    });
+
+    canvas.addEventListener('pointerup', (evt) => {
+      state.dragId = null;
+      modeReadout.textContent = 'Drag';
+      try { canvas.releasePointerCapture(evt.pointerId); } catch (e) {}
+    });
+
+    canvas.addEventListener('pointerleave', () => {
+      state.dragId = null;
+      modeReadout.textContent = 'Drag';
+    });
+
+    canvas.addEventListener('dblclick', (evt) => {
+      const pos = pointerPos(evt);
+      if (hitTest(pos) >= 0) return;
+      addPoint(state.currentAddType || selectedType.value, pos.x, pos.y, Number(selectedStrength.value));
+      modeReadout.textContent = 'Added';
+    });
+
+    themeToggle.addEventListener('click', () => {
+      const root = document.documentElement;
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      themeToggle.innerHTML = next === 'dark'
+        ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+        : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+      draw();
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+  </script>
+</body>
+</html>
